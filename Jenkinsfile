@@ -42,7 +42,7 @@ for(j = 0; j < jdks.size(); j++) {
                         // See below for what this method does - we're passing an arbitrary environment
                         // variable to it so that JAVA_OPTS and MAVEN_OPTS are set correctly.
                         withJdkEnv(["JAVA_OPTS=-Xmx1536m -Xms512m",
-									"MAVEN_OPTS=-Xmx1536m -Xms512m"], buildType, jdk) {
+                                    "MAVEN_OPTS=-Xmx1536m -Xms512m"], buildType, jdk) {
                             // Actually run Maven!
                             // -Dmaven.repo.local=… tells Maven to create a subdir in the temporary directory for the local Maven repository
                             def mvnCmd = "./mvnw -Pdebug -U -Dset.changelist help:evaluate -Dexpression=changelist -Doutput=$changelistF clean install ${runTests ? '-Dmaven.test.failure.ignore' : '-DskipTests'} -V -B -ntp -Dmaven.repo.local=$m2repo -e"
