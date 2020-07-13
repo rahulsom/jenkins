@@ -88,7 +88,7 @@ builds.ath = {
         dir("sources") {
             checkout scm
             withJdkEnv(["JAVA_OPTS=-Xmx1536m -Xms512m",
-						"MAVEN_OPTS=-Xmx1536m -Xms512m"], 8) {
+                          "MAVEN_OPTS=-Xmx1536m -Xms512m"], 8) {
                 sh "./mvnw --batch-mode --show-version -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -DskipTests -am -pl war package -Dmaven.repo.local=${pwd tmp: true}/m2repo"
             }
             dir("war/target") {
