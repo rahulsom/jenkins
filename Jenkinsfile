@@ -24,8 +24,8 @@ for(j = 0; j < jdks.size(); j++) {
     def jdk = jdks[j]
     builds["${buildType}-jdk${jdk}"] = {
         // see https://github.com/jenkins-infra/documentation/blob/master/ci.adoc#node-labels for information on what node types are available
-		// We do not rely on the maven version provided by the agent. The maven version is selected by the wrapper in
-		// .mvn/wrapper/maven-wrapper.properties
+        // We do not rely on the maven version provided by the agent. The maven version is selected by the wrapper in
+        // .mvn/wrapper/maven-wrapper.properties
         node(buildType == 'Linux' ? (jdk == 8 ? 'maven' : 'maven-11') : buildType.toLowerCase()) {
                 // First stage is actually checking out the source. Since we're using Multibranch
                 // currently, we can use "checkout scm".
