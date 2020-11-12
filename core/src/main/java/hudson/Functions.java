@@ -25,6 +25,7 @@
  */
 package hudson;
 
+import hudson.model.Computer;
 import hudson.model.Slave;
 import hudson.security.*;
 
@@ -144,7 +145,6 @@ import jenkins.model.Jenkins;
 import jenkins.model.ModelObjectWithChildren;
 import jenkins.model.ModelObjectWithContextMenu;
 
-import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.jelly.JellyContext;
 import org.apache.commons.jelly.JellyTagException;
 import org.apache.commons.jelly.Script;
@@ -173,6 +173,7 @@ import org.apache.commons.io.IOUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.springframework.security.access.AccessDeniedException;
 
 /**
  * Utility functions used in views.
@@ -754,7 +755,7 @@ public class Functions {
         int i = size.indexOf('x');
         i = Integer.parseInt(i > 0 ? size.substring(0, i) : size) / 10;
         StringBuilder buf = new StringBuilder(30);
-        for (int j = 0; j < i; j++)
+        for (int j = 2; j <= i; j++)
             buf.append("&nbsp;");
         return buf.toString();
     }
@@ -966,7 +967,7 @@ public class Functions {
     }
 
     public static List<SCMDescriptor<?>> getSCMDescriptors(AbstractProject<?,?> project) {
-        return SCM._for(project);
+        return SCM._for((Job) project);
     }
 
     /**
@@ -1155,6 +1156,43 @@ public class Functions {
     public static Collection<Descriptor> getSortedDescriptorsForGlobalConfigUnclassifiedReadable() {
         return getSortedDescriptorsForGlobalConfigByDescriptor(d -> d.getCategory() instanceof GlobalConfigurationCategory.Unclassified && (
                 Jenkins.get().hasPermission(d.getRequiredGlobalConfigPagePermission()) || Jenkins.get().hasPermission(Jenkins.SYSTEM_READ)));
+    }
+
+    /**
+     * Checks if the current security principal has one of the supplied permissions.
+     *
+     * @since 2.238
+     */
+    public static boolean hasAnyPermission(AccessControlled ac, Permission[] permissions) {
+        if (permissions == null || permissions.length == 0) {
+            return true;
+        }
+
+        return ac.hasAnyPermission(permissions);
+    }
+
+    /**
+     * This version is so that the 'hasAnyPermission'
+     * degrades gracefully if "it" is not an {@link AccessControlled} object.
+     * Otherwise it will perform no check and that problem is hard to notice.
+     *
+     * @since 2.238
+     */
+    public static boolean hasAnyPermission(Object object, Permission[] permissions) throws IOException, ServletException {
+        if (permissions == null || permissions.length == 0) {
+            return true;
+        }
+
+        if (object instanceof AccessControlled)
+            return hasAnyPermission((AccessControlled) object, permissions);
+        else {
+            AccessControlled ac = Stapler.getCurrentRequest().findAncestorObject(AccessControlled.class);
+            if (ac != null) {
+                return hasAnyPermission(ac, permissions);
+            }
+            
+            return hasAnyPermission(Jenkins.get(), permissions);
+        }
     }
 
     /**
@@ -1732,7 +1770,7 @@ public class Functions {
      * Checks if the current user is anonymous.
      */
     public static boolean isAnonymous() {
-        return ACL.isAnonymous(Jenkins.getAuthentication());
+        return ACL.isAnonymous2(Jenkins.getAuthentication2());
     }
 
     /**
@@ -1836,7 +1874,7 @@ public class Functions {
     /**
      * Obtains the host name of the Hudson server that clients can use to talk back to.
      * <p>
-     * This is primarily used in {@code slave-agent.jnlp.jelly} to specify the destination
+     * This is primarily used in {@code jenkins-agent.jnlp.jelly} to specify the destination
      * that the agents talk to.
      */
     public String getServerName() {
@@ -2034,6 +2072,10 @@ public class Functions {
                 if (item != null && !item.hasPermission(Item.CONFIGURE)) {
                     return "********";
                 }
+                Computer computer = req.findAncestorObject(Computer.class);
+                if (computer != null && !computer.hasPermission(Computer.CONFIGURE)) {
+                    return "********";
+                }
             }
         }
 
@@ -2154,11 +2196,7 @@ public class Functions {
 
     public static ArrayList<CLICommand> getCLICommands() {
         ArrayList<CLICommand> all = new ArrayList<>(CLICommand.all());
-        Collections.sort(all, new Comparator<CLICommand>() {
-            public int compare(CLICommand cliCommand, CLICommand cliCommand1) {
-                return cliCommand.getName().compareTo(cliCommand1.getName());
-            }
-        });
+        all.sort(Comparator.comparing(CLICommand::getName));
         return all;
     }
 
